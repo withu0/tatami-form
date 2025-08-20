@@ -273,7 +273,7 @@ export default function Home() {
 
   const steps = [1, 2, 3, 4, 5, 6].map((n) => n <= answeredCount);
 
-   // Wizard controls
+  // Wizard controls
   const totalSteps = 6;
   const [currentStep, setCurrentStep] = useState<number>(1);
 
@@ -360,309 +360,383 @@ export default function Home() {
   return (
     <main className={`min-h-screen bg-[#f6f4ee] text-[#2b3a2e] py-6 px-4 ${shipporimincho.className}`}>
       <div className="mx-auto w-full max-w-[980px]">
-        {/* Progress / Accuracy */}
-        <div className="mt-4 bg-transparent px-5 py-4">
-          <div className="mb-2 flex items-center justify-between">
+        {/* Progress / Accuracy and Step Header (hidden on completion) */}
+        {answeredCount !== 6 && (
+          <>
+            <div className="mb-4 bg-transparent">
+              <div className="mb-2 flex items-center justify-between">
 
-            <span className="text-lg font-extrabold text-[#38542A]">
-              <span className="mb-2 text-sm pr-4 text-[#385243]">Step {currentStep} / {totalSteps}</span>
-              {accuracy}%
-            </span>
-            <span className="font-bold text-[#38542A] text-righ">見積もり精度</span>
-          </div>
-          <div className="mb-2 grid grid-cols-6">
-            {steps.map((done, i) => (
-              <div key={i} className={`h-2  ${done ? "bg-[#38542A]" : "bg-[#DADFD6]"}`} />
-            ))}
-          </div>
-          <p className="text-sm text-[#385243]">
-            回答が進むほど金額の幅が狭まり、精度が上がります。
-          </p>
-        </div>
-        <div className=" flex items-center justify-start mb-[10px]">
-          <span className="pr-5">
-              {IconSvgMap[currentStep]}
-          </span>
+                <span className="text-lg font-extrabold text-[#38542A]">
+                  <span className="mb-2 text-sm pr-4 text-[#385243]">Step {currentStep} / {totalSteps}</span>
+                  {accuracy}%
+                </span>
+                <span className="font-bold text-[#38542A] text-righ">見積もり精度</span>
+              </div>
+              <div className="mb-2 grid grid-cols-6">
+                {steps.map((done, i) => (
+                  <div key={i} className={`h-2  ${done ? "bg-[#38542A]" : "bg-[#DADFD6]"}`} />
+                ))}
+              </div>
+              {/* <p className="text-sm text-[#385243]">
+                回答が進むほど金額の幅が狭まり、精度が上がります。
+              </p> */}
+            </div>
+            <div className=" flex items-center justify-start mb-[10px]">
+              <span className="pr-5">
+                {IconSvgMap[currentStep]}
+              </span>
 
-          <h1 className="mb-4 bg-transparent text-[26px] font-bold tracking-wide">
-            {stepTitles[currentStep - 1]}
-          </h1>
-        </div>
+              <h1 className="bg-transparent text-[26px] font-bold tracking-wide">
+                {stepTitles[currentStep - 1]}
+              </h1>
+            </div>
 
-        <div className="overflow-hidden bg-transparent">
-          <img
-            alt="ステップ用イメージ"
-            src={stepImageMap[currentStep]}
-            className="block h-[300px] w-full object-cover md:h-[420px]"
-          />
-        </div>
+            <div className="overflow-hidden bg-transparent">
+              <img
+                alt="ステップ用イメージ"
+                src={stepImageMap[currentStep]}
+                className="block h-[300px] w-full object-cover md:h-[420px]"
+              />
+            </div>
+          </>
+        )}
 
 
         {/* Wizard (one question per step) */}
-        <section className="mt-6">
-          {/* STEP 1 */}
-          {currentStep === 1 && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
-              {(
-                [
-                  { key: "detached", label: "一戸建ての和室", sub: "係数1.00" },
-                  { key: "mansion", label: "マンションの和室", sub: "係数1.15" },
-                  { key: "living", label: "リビング・洋室", sub: "係数0.95" },
-                  { key: "unknown", label: "その他・わからない", sub: "係数1.10" },
-                ] as { key: RoomTypeKey; label: string; sub: string }[]
-              ).map(({ key, label, sub }) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    setRoomType(key);
-                    setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                  }}
-                  className={` border-2 px-4 py-3 text-left font-bold shadow-sm transition-colors ${roomType === key
-                    ? "border-[#38542A] bg-[#38542A] text-white"
-                    : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                    }`}
-                >
-                  <div>{label}</div>
-                  <div className="text-xs opacity-80">{sub}</div>
-                </button>
-              ))}
-            </div>
-          )}
+        {answeredCount === 6 ? (
+          // Final Estimate Result Card (matching attached design)
+          <section className="mt-6">
+            <div className="border-2 border-[#38542A] bg-transparent p-8 text-center">
+              <div className="flex gap-10 flex-wrap">
+                <div className="w-[503px]">
+                  <h2 className="text-2xl md:text-3xl font-bold text-[#38542A] mb-2">あなたの畳の最終見積もり結果</h2>
+                  <div className="text-[#385243] mb-4">ご回答いただいた内容から専用の見積もりを作成しました。</div>
+                  <div className="border-2 border-[#38542A] py-8 px-4 my-6 max-w-xl mx-auto">
+                    <div className="text-lg text-[#385243] mb-2">最終見積額</div>
+                    <div className="text-3xl md:text-4xl font-extrabold text-[#38542A] mb-2">
+                      {roundedRange ? `${roundedRange.low.toLocaleString()}~${roundedRange.high.toLocaleString()}円` : "-"}
+                    </div>
+                  </div>
+                  <div className="text-sm text-[#385243] mb-6">※この見積もりは概算です。正確な金額は現地確認後に決定します。</div>
+                </div>
+                <div className="text-left flex-1">
+                  <h3 className="text-xl font-bold text-[#38542A] mb-2">選択された条件</h3>
+                  <ul className="text-[#385243] text-sm list-disc pl-5">
+                    <li>お部屋タイプ：{roomType === "detached" ? "一戸建ての和室" : roomType === "mansion" ? "マンションの和室" : roomType === "living" ? "リビング・洋室" : "その他"}</li>
+                    <li>畳の広さ：{sizeKey === "small" ? "4.5畳以下" : sizeKey === "six" ? "6畳" : sizeKey === "eightPlus" ? "8畳以上" : `${customTatami}畳`}</li>
+                    <li>施工内容：{work === "replace" ? "既存畳の張り替え" : work === "new" ? "新規導入" : work === "okidatami" ? "置き畳" : "相談"}</li>
+                    <li>用途：{usage === "daily" ? "普段の生活" : usage === "kids" ? "子ども部屋" : usage === "pets" ? "ペットがいる部屋" : usage === "care" ? "介護・お風呂用" : "-"}</li>
+                    <li>重視ポイント：{priority === "cost" ? "コスト" : priority === "health" ? "抗菌・防カビ・防ダニ" : priority === "durability" ? "耐久性" : priority === "design" ? "デザイン" : "-"}</li>
+                    <li>畳スタイル：{material === "igusa_cn" ? "天然い草（中国産）" : material === "igusa_jp" ? "天然い草（国産）" : material === "resin" ? "樹脂畳" : material === "washi" ? "和紙畳" : "-"}</li>
+                    <li>グレード：{grade === "economy" ? "エコノミー" : grade === "standard" ? "スタンダード" : grade === "premium" ? "プレミアム" : grade === "deluxe" ? "デラックス" : "-"}</li>
+                  </ul>
+                </div>
+              </div>
+                <div className="text-left mb-8 flex flex-col w-full">
+                  <h3 className="text-xl font-bold text-center text-[#38542A] mb-2">さらに正確な見積もりのために</h3>
+                  <div className="text-[#385243] text-center text-sm mb-2">現地確認や詳細なお打ち合わせをご希望の方は以下よりご連絡ください。<br />お写真を送っていただくとより正確な見積もりが可能です。</div>
+                </div>
+              <div className="flex flex-col md:flex-row gap-4 justify-center mt-8">
+                <a href="#" className="flex-1 w-[362px] md:flex-none bg-[#38542A] text-white font-bold py-4 rounded flex items-center justify-center text-lg hover:bg-[#254e33] transition">
+                  <span className="mr-2">
+                    <svg width="35" height="28" viewBox="0 0 35 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <g clip-path="url(#clip0_2013_37)">
+                        <path d="M1.81619 27.4771C1.21642 26.856 3.7601 22.9474 4.1297 22.1128C4.1297 21.4819 2.95672 20.5387 2.62917 19.976C2.18432 19.2118 0.181388 15.3265 0.0906472 14.7413C-0.860283 8.59713 5.82869 1.47519 11.5903 0.37761C15.9127 -0.445765 25.4773 -0.0599248 28.9498 2.91516C30.8199 4.51771 33.0575 7.59095 33.883 9.94195C34.0512 10.4214 35.011 13.9629 34.9999 14.1847C34.6451 21.2901 26.0446 27.4171 19.425 27.9678C17.321 28.1431 12.2432 27.5775 10.2543 26.8844C9.49151 26.6185 8.86886 25.679 7.86703 25.6812C7.36464 25.682 5.43179 26.605 4.65718 26.8327C3.8206 27.0792 2.69335 27.2733 1.81619 27.4763V27.4771Z" fill="white" />
+                      </g>
+                      <defs>
+                        <clipPath id="clip0_2013_37">
+                          <rect width="35" height="28" fill="white" />
+                        </clipPath>
+                      </defs>
+                    </svg>
 
-          {/* STEP 2 */}
-          {currentStep === 2 && (
-            <>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  </span>LINEで相談する</a>
+                <a href="#" className="flex-1 w-[362px] md:flex-none bg-[#d94d1a] text-white font-bold py-4 rounded flex items-center justify-center text-lg hover:bg-[#b53c0e] transition">
+                  <span className="mr-2"><svg width="30" height="29" viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g clip-path="url(#clip0_2013_26)">
+                      <path d="M9.95406 3.94879C8.54837 2.39141 6.73089 -1.79785 4.11148 0.867388L10.8736 7.86689L12.6307 6.22251C12.5626 5.91799 10.4402 4.48677 9.9556 3.95024L9.95406 3.94879ZM5.08989 3.93284C4.67345 3.53842 4.43349 2.75393 3.83746 2.60022C2.03391 2.1304 0.154505 6.99539 0.0322042 8.45272C-0.761977 17.9724 12.8645 31.1217 23.2879 28.7102C23.7477 28.6044 26.9663 27.4661 27.0886 27.3138C27.2403 25.9304 25.6194 25.7709 24.8593 25.1909C24.0357 24.563 21.8544 22.4401 21.1624 22.1516C20.3372 21.8079 19.2489 22.5286 17.8881 22.2023C17.7178 22.1617 15.1882 20.5724 14.9421 20.3941C13.6091 19.4283 8.85644 15.1564 8.44155 13.9209C7.56532 11.3079 9.86891 10.0942 9.61657 9.00084C9.52213 8.59047 5.75867 4.56652 5.08834 3.92994L5.08989 3.93284ZM29.3039 26.1639C29.4711 26.0493 29.7467 24.7414 29.5284 24.2759C29.3767 23.954 24.6038 19.4878 24.2493 19.292C22.7724 18.4742 22.5371 19.337 21.1825 19.6995C21.0803 20.8755 22.6377 20.9639 23.4164 21.5947C24.2896 22.3038 28.4014 26.7787 29.3039 26.1625V26.1639Z" fill="black" />
+                      <path d="M5.09086 4.36444C5.76119 4.99957 9.52311 9.02352 9.61909 9.43534C9.87143 10.5287 7.56784 11.7424 8.44407 14.3554C8.85742 15.5909 13.6117 19.8628 14.9446 20.8286C15.1907 21.0069 17.7204 22.5962 17.8907 22.6368C19.2514 22.9631 20.3398 22.2409 21.1649 22.5861C21.8569 22.8746 24.0382 24.9975 24.8618 25.6254C25.6219 26.204 27.2428 26.3649 27.0911 27.7483C26.9672 27.9006 23.7503 29.0374 23.2905 29.1447C12.867 31.5533 -0.761004 18.404 0.0331772 8.88431C0.155478 7.42699 2.03489 2.562 3.83999 3.03182C4.43601 3.18698 4.67597 3.97002 5.09241 4.36444H5.09086Z" fill="white" />
+                      <path d="M9.95439 3.94849C10.439 4.48502 12.563 5.91624 12.6295 6.22075L10.8724 7.86514L4.11182 0.867086C6.73122 -1.79815 8.54871 2.39256 9.95594 3.94849H9.95439Z" fill="white" />
+                      <path d="M29.3042 26.1637C28.4016 26.7799 24.2898 22.305 23.4167 21.5959C22.6395 20.9652 21.0806 20.8767 21.1828 19.7007C22.5374 19.3382 22.7727 18.4754 24.2496 19.2932C24.6041 19.489 29.3769 23.9552 29.5286 24.2771C29.7469 24.7411 29.4714 26.0506 29.3042 26.1651V26.1637Z" fill="white" />
+                    </g>
+                    <defs>
+                      <clipPath id="clip0_2013_26">
+                        <rect width="29.6092" height="29" fill="white" />
+                      </clipPath>
+                    </defs>
+                  </svg>
+                  </span>
+                  電話で相談する</a>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="mt-6">
+            {/* STEP 1 */}
+            {currentStep === 1 && (
+              <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 md:grid-cols-4">
                 {(
                   [
-                    { key: "small", label: "4畳半以下（小さい部屋）", sub: "係数1.20 / 4.5畳" },
-                    { key: "six", label: "6畳（一般的な部屋）", sub: "係数1.00 / 6畳" },
-                    { key: "eightPlus", label: "8畳以上（広めの部屋）", sub: "係数0.95 / 8畳" },
-                    { key: "custom", label: "わからない・入力する", sub: "畳数を入力" },
-                  ] as { key: SizeKey; label: string; sub: string }[]
+                    { key: "detached", label: "一戸建ての和室", sub: "係数1.00" },
+                    { key: "mansion", label: "マンションの和室", sub: "係数1.15" },
+                    { key: "living", label: "リビング・洋室", sub: "係数0.95" },
+                    { key: "unknown", label: "その他・わからない", sub: "係数1.10" },
+                  ] as { key: RoomTypeKey; label: string; sub: string }[]
                 ).map(({ key, label, sub }) => (
                   <button
                     key={key}
                     onClick={() => {
-                      setSizeKey(key);
-                      if (key !== "custom") setCurrentStep((s) => Math.min(totalSteps, s + 1));
+                      setRoomType(key);
+                      setCurrentStep((s) => Math.min(totalSteps, s + 1));
                     }}
-                    className={`border-2 px-4 py-3 text-left font-bold shadow-sm transition-colors ${sizeKey === key
+                    className={` border-2 px-0 text-center py-3 text-left font-bold shadow-sm transition-colors ${roomType !== key
                       ? "border-[#38542A] bg-[#38542A] text-white"
                       : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
                       }`}
                   >
                     <div>{label}</div>
-                    <div className="text-xs opacity-80">{sub}</div>
+                    {/* <div className="text-xs opacity-80">{sub}</div> */}
                   </button>
                 ))}
               </div>
-              {sizeKey === "custom" && (
-                <div className="mt-3 flex items-center gap-3">
-                  <label className="text-sm">畳数</label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.5"
-                    placeholder="例: 5.5"
-                    className="w-32 border border-[#38542A] bg-white px-3 py-2 shadow-sm"
-                    value={customTatami}
-                    onChange={(e) => {
-                      const v = e.target.value === "" ? "" : Number(e.target.value);
-                      setCustomTatami(v);
-                      if (v !== "" && Number(v) > 0) setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                    }}
-                  />
-                  <div className="text-sm opacity-80">係数 {calcSizeCoefFromTatami(Number(customTatami) || 0).toFixed(2)}</div>
+            )}
+
+            {/* STEP 2 */}
+            {currentStep === 2 && (
+              <>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  {(
+                    [
+                      { key: "small", label: "4畳半以下", sub: "係数1.20 / 4.5畳" },
+                      { key: "six", label: "6畳", sub: "係数1.00 / 6畳" },
+                      { key: "eightPlus", label: "8畳以上", sub: "係数0.95 / 8畳" },
+                      { key: "custom", label: "わからない・入力する", sub: "畳数を入力" },
+                    ] as { key: SizeKey; label: string; sub: string }[]
+                  ).map(({ key, label, sub }) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setSizeKey(key);
+                        if (key !== "custom") setCurrentStep((s) => Math.min(totalSteps, s + 1));
+                      }}
+                      className={`border-2 py-3 text-center font-bold ${key === "custom" && 'text-[15px]'} shadow-sm transition-colors ${sizeKey !== key
+                        ? "border-[#38542A] bg-[#38542A] text-white"
+                        : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
+                        }`}
+                    >
+                      <div>{label}</div>
+                      {/* <div className="text-xs opacity-80">{sub}</div> */}
+                    </button>
+                  ))}
                 </div>
-              )}
-            </>
-          )}
+                {sizeKey === "custom" && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <label className="text-sm">畳数</label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.5"
+                      placeholder="例: 5.5"
+                      className="w-32 border border-[#38542A] bg-white px-3 py-2 shadow-sm"
+                      value={customTatami}
+                      onChange={(e) => {
+                        const v = e.target.value === "" ? "" : Number(e.target.value);
+                        setCustomTatami(v);
+                        if (v !== "" && Number(v) > 0) setCurrentStep((s) => Math.min(totalSteps, s + 1));
+                      }}
+                    />
+                    <div className="text-sm opacity-80">係数 {calcSizeCoefFromTatami(Number(customTatami) || 0).toFixed(2)}</div>
+                  </div>
+                )}
+              </>
+            )}
 
-          {/* STEP 3 */}
-          {currentStep === 3 && (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              {(
-                [
-                  { key: "replace", label: "張り替え（表替え・交換）", sub: "係数1.00" },
-                  { key: "new", label: "新規で畳を導入したい", sub: "係数1.80" },
-                  { key: "okidatami", label: "置き畳タイプが欲しい", sub: "係数1.30" },
-                  { key: "unknown", label: "わからない・相談", sub: "係数1.30" },
-                ] as { key: WorkKey; label: string; sub: string }[]
-              ).map(({ key, label, sub }) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    setWork(key);
-                    setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                  }}
-                  className={`border-2 px-4 py-3 text-left font-bold shadow-sm transition-colors ${work === key
-                    ? "border-[#38542A] bg-[#38542A] text-white"
-                    : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                    }`}
-                >
-                  <div>{label}</div>
-                  <div className="text-xs opacity-80">{sub}</div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* STEP 4 */}
-          {currentStep === 4 && (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              {(
-                [
-                  { key: "daily", label: "普段の生活", sub: "係数1.00" },
-                  { key: "kids", label: "子ども部屋", sub: "係数1.15" },
-                  { key: "pets", label: "ペットがいる部屋", sub: "係数1.25" },
-                  { key: "care", label: "介護・お風呂用", sub: "係数1.35" },
-                ] as { key: UsageKey; label: string; sub: string }[]
-              ).map(({ key, label, sub }) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    setUsage(key);
-                    setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                  }}
-                  className={`border-2 px-4 py-3 text-left font-bold shadow-sm transition-colors ${usage === key
-                    ? "border-[#38542A] bg-[#38542A] text-white"
-                    : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                    }`}
-                >
-                  <div>{label}</div>
-                  <div className="text-xs opacity-80">{sub}</div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* STEP 5 */}
-          {currentStep === 5 && (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              {(
-                [
-                  { key: "cost", label: "コスト重視", sub: "係数0.90" },
-                  { key: "health", label: "健康・機能性重視", sub: "係数1.20" },
-                  { key: "durability", label: "耐久性重視", sub: "係数1.15" },
-                  { key: "design", label: "デザイン重視", sub: "係数1.25" },
-                ] as { key: PriorityKey; label: string; sub: string }[]
-              ).map(({ key, label, sub }) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    setPriority(key);
-                    setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                  }}
-                  className={`border-2 px-4 py-3 text-left font-bold shadow-sm transition-colors ${priority === key
-                    ? "border-[#38542A] bg-[#38542A] text-white"
-                    : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                    }`}
-                >
-                  <div>{label}</div>
-                  <div className="text-xs opacity-80">{sub}</div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* STEP 6 */}
-          {currentStep === 6 && (
-            <>
+            {/* STEP 3 */}
+            {currentStep === 3 && (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                 {(
                   [
-                    { key: "igusa_cn", label: "天然い草（中国産）", sub: "係数1.00" },
-                    { key: "igusa_jp", label: "天然い草（国産）", sub: "係数1.00" },
-                    { key: "resin", label: "樹脂畳", sub: "係数0.95" },
-                    { key: "washi", label: "和紙畳", sub: "係数1.10" },
-                  ] as { key: MaterialKey; label: string; sub: string }[]
+                    { key: "replace", label: "張り替え", sub: "係数1.00" },
+                    { key: "new", label: "新規で畳を導入したい", sub: "係数1.80" },
+                    { key: "okidatami", label: "置き畳タイプが欲しい", sub: "係数1.30" },
+                    { key: "unknown", label: "わからない・相談", sub: "係数1.30" },
+                  ] as { key: WorkKey; label: string; sub: string }[]
                 ).map(({ key, label, sub }) => (
                   <button
                     key={key}
-                    onClick={() => setMaterial(key)}
-                    className={`border-2 px-4 py-3 text-left font-bold shadow-sm transition-colors ${material === key
+                    onClick={() => {
+                      setWork(key);
+                      setCurrentStep((s) => Math.min(totalSteps, s + 1));
+                    }}
+                    className={`border-2 py-3 text-center font-bold ${key !== 'replace' && 'text-[15px]'} shadow-sm transition-colors ${work !== key
                       ? "border-[#38542A] bg-[#38542A] text-white"
                       : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
                       }`}
                   >
                     <div>{label}</div>
-                    <div className="text-xs opacity-80">{sub}</div>
+                    {/* <div className="text-xs opacity-80">{sub}</div> */}
                   </button>
                 ))}
               </div>
+            )}
 
-              <div className="mt-3 flex items-center gap-3">
-                <label className="text-sm">グレード</label>
-                <select
-                  className="w-48 border border-[#38542A] bg-white px-3 py-2 shadow-sm"
-                  value={grade}
-                  onChange={(e) => setGrade(e.target.value as GradeKey)}
-                >
-                  <option value="economy">エコノミー</option>
-                  <option value="standard">スタンダード</option>
-                  <option value="premium">プレミアム</option>
-                  <option value="deluxe">デラックス</option>
-                </select>
-                <div className="text-sm opacity-80">基準単価: {formatJPY(baseUnitPrice)} / {work === "okidatami" ? "枚" : "畳"}</div>
+            {/* STEP 4 */}
+            {currentStep === 4 && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                {(
+                  [
+                    { key: "daily", label: "普段の生活", sub: "係数1.00" },
+                    { key: "kids", label: "子ども部屋", sub: "係数1.15" },
+                    { key: "pets", label: "ペットがいる部屋", sub: "係数1.25" },
+                    { key: "care", label: "介護・お風呂用", sub: "係数1.35" },
+                  ] as { key: UsageKey; label: string; sub: string }[]
+                ).map(({ key, label, sub }) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setUsage(key);
+                      setCurrentStep((s) => Math.min(totalSteps, s + 1));
+                    }}
+                    className={`border-2 py-3 text-center font-bold shadow-sm transition-colors ${usage !== key
+                      ? "border-[#38542A] bg-[#38542A] text-white"
+                      : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
+                      }`}
+                  >
+                    <div>{label}</div>
+                    {/* <div className="text-xs opacity-80">{sub}</div> */}
+                  </button>
+                ))}
               </div>
-            </>
-          )}
+            )}
 
-          {/* Navigation */}
-          <div className="mt-5 flex items-center justify-between">
-            <button
-              onClick={goPrev}
-              className={`border-2 px-4 py-2 font-bold shadow-sm ${currentStep === 1
-                ? "cursor-not-allowed border-[#AEB7A8] bg-[#E7EBE3] text-[#7a857d]"
-                : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                }`}
-              disabled={currentStep === 1}
-            >
-              戻る
-            </button>
-            <button
-              onClick={goNext}
-              className={`border-2 px-6 py-2 font-bold shadow-sm ${true
-                ? "border-[#38542A] bg-[#38542A] text-white hover:bg-[#254e33]"
-                : "cursor-not-allowed border-[#AEB7A8] bg-[#E7EBE3] text-[#7a857d]"
-                }`}
-              disabled={currentStep === totalSteps}
-            >
-              次へ
-            </button>
-          </div>
-        </section>
+            {/* STEP 5 */}
+            {currentStep === 5 && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                {(
+                  [
+                    { key: "cost", label: "コスト重視", sub: "係数0.90" },
+                    { key: "health", label: "健康・機能性重視", sub: "係数1.20" },
+                    { key: "durability", label: "耐久性重視", sub: "係数1.15" },
+                    { key: "design", label: "デザイン重視", sub: "係数1.25" },
+                  ] as { key: PriorityKey; label: string; sub: string }[]
+                ).map(({ key, label, sub }) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      setPriority(key);
+                      setCurrentStep((s) => Math.min(totalSteps, s + 1));
+                    }}
+                    className={`border-2 py-3 text-center font-bold shadow-sm transition-colors ${priority !== key
+                      ? "border-[#38542A] bg-[#38542A] text-white"
+                      : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
+                      }`}
+                  >
+                    <div>{label}</div>
+                    {/* <div className="text-xs opacity-80">{sub}</div> */}
+                  </button>
+                ))}
+              </div>
+            )}
 
-        {/* Estimate Card */}
-        <div className="mt-6 border-2 border-[#38542A] bg-white p-5">
-          <div className="mb-2 text-sm text-[#385243]">現在の試算</div>
-          <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="text-[22px] font-extrabold text-[#38542A]">
-              {roundedRange ? (
-                <>
-                  {formatJPY(roundedRange.low)} ～ {formatJPY(roundedRange.high)}
-                </>
-              ) : (
-                "金額を表示するにはいくつかの質問にお答えください"
-              )}
+            {/* STEP 6 */}
+            {currentStep === 6 && (
+              <>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                  {(
+                    [
+                      { key: "igusa_cn", label: "天然い草（中国産）", sub: "係数1.00" },
+                      { key: "igusa_jp", label: "天然い草（国産）", sub: "係数1.00" },
+                      { key: "resin", label: "樹脂畳", sub: "係数0.95" },
+                      { key: "washi", label: "和紙畳", sub: "係数1.10" },
+                    ] as { key: MaterialKey; label: string; sub: string }[]
+                  ).map(({ key, label, sub }) => (
+                    <button
+                      key={key}
+                      onClick={() => setMaterial(key)}
+                      className={`border-2 py-3 text-center font-bold shadow-sm transition-colors ${material !== key
+                        ? "border-[#38542A] bg-[#38542A] text-white"
+                        : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
+                        }`}
+                    >
+                      <div>{label}</div>
+                      {/* <div className="text-xs opacity-80">{sub}</div> */}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <label className="text-sm">グレード</label>
+                  <select
+                    className="w-48 border border-[#38542A] bg-white px-3 py-2 shadow-sm"
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value as GradeKey)}
+                  >
+                    <option value="economy">エコノミー</option>
+                    <option value="standard">スタンダード</option>
+                    <option value="premium">プレミアム</option>
+                    <option value="deluxe">デラックス</option>
+                  </select>
+                  <div className="text-sm opacity-80">基準単価: {formatJPY(baseUnitPrice)} / {work === "okidatami" ? "枚" : "畳"}</div>
+                </div>
+              </>
+            )}
+            {/* Navigation */}
+            <div className="mt-5 flex items-center justify-between">
+              <button
+                onClick={goPrev}
+                className={`border-2 px-4 py-2 font-bold shadow-sm ${currentStep === 1
+                  ? "cursor-not-allowed border-[#AEB7A8] bg-[#E7EBE3] text-[#7a857d]"
+                  : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
+                  }`}
+                disabled={currentStep === 1}
+              >
+                戻る
+              </button>
+              <button
+                onClick={goNext}
+                className={`border-2 px-6 py-2 font-bold shadow-sm ${true
+                  ? "border-[#38542A] bg-[#38542A] text-white hover:bg-[#254e33]"
+                  : "cursor-not-allowed border-[#AEB7A8] bg-[#E7EBE3] text-[#7a857d]"
+                  }`}
+                disabled={currentStep === totalSteps}
+              >
+                次へ
+              </button>
             </div>
-            <div className="text-sm text-[#385243]">
-              畳数: {tatamiCount || 0} / 単価: {formatJPY(baseUnitPrice)} / 係数合計: {(
-                (roomType ? ROOM_TYPE_COEF[roomType] : 1) *
-                quantityCoef *
-                (work ? WORK_COEF[work] : 1) *
-                (usage ? USAGE_COEF[usage] : 1) *
-                (priority ? PRIORITY_COEF[priority] : 1) *
-                (material ? MATERIAL_COEF[material] : 1)
-              ).toFixed(2)}
-              {addOnPerTatami > 0 ? ` / 追加加工 ${formatJPY(addOnPerTatami)}×${tatamiCount || 0}` : ""}
+          </section>
+        )}
+
+        {/* Estimate Card (hidden on completion) */}
+        {answeredCount !== 6 && (
+          <div className="mt-6 border-2 border-[#38542A] bg-white p-5">
+            <div className="mb-2 text-sm text-[#385243]">現在の試算</div>
+            <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="text-[22px] font-extrabold text-[#38542A]">
+                {roundedRange ? (
+                  <>
+                    {formatJPY(roundedRange.low)} ～ {formatJPY(roundedRange.high)}
+                  </>
+                ) : (
+                  "金額を表示するにはいくつかの質問にお答えください"
+                )}
+              </div>
+              <div className="text-sm text-[#385243]">
+                畳数: {tatamiCount || 0} / 単価: {formatJPY(baseUnitPrice)} / 係数合計: {(
+                  (roomType ? ROOM_TYPE_COEF[roomType] : 1) *
+                  quantityCoef *
+                  (work ? WORK_COEF[work] : 1) *
+                  (usage ? USAGE_COEF[usage] : 1) *
+                  (priority ? PRIORITY_COEF[priority] : 1) *
+                  (material ? MATERIAL_COEF[material] : 1)
+                ).toFixed(2)}
+                {addOnPerTatami > 0 ? ` / 追加加工 ${formatJPY(addOnPerTatami)}×${tatamiCount || 0}` : ""}
+              </div>
+            </div>
+            <div className="mt-2 text-sm text-[#385243]">
+              精度見込み: <span className="font-bold text-[#38542A]">{accuracy}%</span>（幅 ±{Math.round(stepSpread * 100)}%）
             </div>
           </div>
-          <div className="mt-2 text-sm text-[#385243]">
-            精度見込み: <span className="font-bold text-[#38542A]">{accuracy}%</span>（幅 ±{Math.round(stepSpread * 100)}%）
-          </div>
-        </div>
+        )}
       </div>
     </main>
   );

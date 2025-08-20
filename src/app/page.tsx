@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Shippori_Mincho } from "next/font/google";
+import Image from "next/image";
 
 const shipporimincho = Shippori_Mincho({
   subsets: ["latin"],
@@ -392,7 +393,7 @@ export default function Home() {
             </div>
 
             <div className="overflow-hidden bg-transparent">
-              <img
+              <Image
                 alt="ステップ用イメージ"
                 src={stepImageMap[currentStep]}
                 className="block h-[300px] w-full object-cover md:h-[420px]"

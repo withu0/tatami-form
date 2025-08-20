@@ -277,6 +277,7 @@ export default function Home() {
   // Wizard controls
   const totalSteps = 6;
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [isFinished, setIsFinished] = useState<boolean>(false);
 
   // function isStepAnswered(step: number): boolean {
   //   switch (step) {
@@ -362,7 +363,7 @@ export default function Home() {
     <main className={`min-h-screen bg-[#f6f4ee] text-[#2b3a2e] py-6 px-4 ${shipporimincho.className}`}>
       <div className="mx-auto w-full max-w-[980px]">
         {/* Progress / Accuracy and Step Header (hidden on completion) */}
-        {answeredCount !== 6 && (
+        {!isFinished && (
           <>
             <div className="mb-4 bg-transparent">
               <div className="mb-2 flex items-center justify-between">
@@ -392,11 +393,14 @@ export default function Home() {
               </h1>
             </div>
 
-            <div className="overflow-hidden bg-transparent">
+            <div className="relative overflow-hidden bg-transparent h-[300px] md:h-[420px] w-full">
               <Image
                 alt="ステップ用イメージ"
                 src={stepImageMap[currentStep]}
-                className="block h-[300px] w-full object-cover md:h-[420px]"
+                fill
+                sizes="100vw"
+                className="object-cover"
+                priority
               />
             </div>
           </>
@@ -404,11 +408,11 @@ export default function Home() {
 
 
         {/* Wizard (one question per step) */}
-        {answeredCount === 6 ? (
+        {isFinished ? (
           // Final Estimate Result Card (matching attached design)
           <section className="mt-6">
-            <div className="border-2 border-[#38542A] bg-transparent p-8 text-center">
-              <div className="flex gap-10 flex-wrap">
+            <div className="border-2 border-[#38542A] bg-transparent p-4 text-center md:p-8">
+              <div className="flex md:gap-10 gap-0 flex-wrap justify-center">
                 <div className="w-[503px]">
                   <h2 className="text-2xl md:text-3xl font-bold text-[#38542A] mb-2">あなたの畳の最終見積もり結果</h2>
                   <div className="text-[#385243] mb-4">ご回答いただいた内容から専用の見積もりを作成しました。</div>
@@ -420,7 +424,7 @@ export default function Home() {
                   </div>
                   <div className="text-sm text-[#385243] mb-6">※この見積もりは概算です。正確な金額は現地確認後に決定します。</div>
                 </div>
-                <div className="text-left flex-1">
+                <div className="text-left flex-1 w-[300px] min-w-[300px] ">
                   <h3 className="text-xl font-bold text-[#38542A] mb-2">選択された条件</h3>
                   <ul className="text-[#385243] text-sm list-disc pl-5">
                     <li>お部屋タイプ：{roomType === "detached" ? "一戸建ての和室" : roomType === "mansion" ? "マンションの和室" : roomType === "living" ? "リビング・洋室" : "その他"}</li>
@@ -433,15 +437,15 @@ export default function Home() {
                   </ul>
                 </div>
               </div>
-                <div className="text-left mb-8 flex flex-col w-full">
+                <div className="text-left mb-8 flex flex-col w-full mt-4 md:mt-0">
                   <h3 className="text-xl font-bold text-center text-[#38542A] mb-2">さらに正確な見積もりのために</h3>
                   <div className="text-[#385243] text-center text-sm mb-2">現地確認や詳細なお打ち合わせをご希望の方は以下よりご連絡ください。<br />お写真を送っていただくとより正確な見積もりが可能です。</div>
                 </div>
               <div className="flex flex-col md:flex-row gap-4 justify-center mt-8">
-                <a href="#" className="flex-1 w-[362px] md:flex-none bg-[#38542A] text-white font-bold py-4 rounded flex items-center justify-center text-lg hover:bg-[#254e33] transition">
+                <a href="#" className="w-full md:w-[362px] md:flex-none bg-[#38542A] text-white font-bold py-4 rounded flex items-center justify-center text-lg hover:bg-[#254e33] transition">
                   <span className="mr-2">
                     <svg width="35" height="28" viewBox="0 0 35 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <g clip-path="url(#clip0_2013_37)">
+                      <g clipPath="url(#clip0_2013_37)">
                         <path d="M1.81619 27.4771C1.21642 26.856 3.7601 22.9474 4.1297 22.1128C4.1297 21.4819 2.95672 20.5387 2.62917 19.976C2.18432 19.2118 0.181388 15.3265 0.0906472 14.7413C-0.860283 8.59713 5.82869 1.47519 11.5903 0.37761C15.9127 -0.445765 25.4773 -0.0599248 28.9498 2.91516C30.8199 4.51771 33.0575 7.59095 33.883 9.94195C34.0512 10.4214 35.011 13.9629 34.9999 14.1847C34.6451 21.2901 26.0446 27.4171 19.425 27.9678C17.321 28.1431 12.2432 27.5775 10.2543 26.8844C9.49151 26.6185 8.86886 25.679 7.86703 25.6812C7.36464 25.682 5.43179 26.605 4.65718 26.8327C3.8206 27.0792 2.69335 27.2733 1.81619 27.4763V27.4771Z" fill="white" />
                       </g>
                       <defs>
@@ -452,7 +456,7 @@ export default function Home() {
                     </svg>
 
                   </span>LINEで相談する</a>
-                <a href="#" className="flex-1 w-[362px] md:flex-none bg-[#d94d1a] text-white font-bold py-4 rounded flex items-center justify-center text-lg hover:bg-[#b53c0e] transition">
+                <a href="#" className="w-full md:w-[362px] md:flex-none bg-[#d94d1a] text-white font-bold py-4 rounded flex items-center justify-center text-lg hover:bg-[#b53c0e] transition">
                   <span className="mr-2"><svg width="30" height="29" viewBox="0 0 30 29" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g clip-path="url(#clip0_2013_26)">
                       <path d="M9.95406 3.94879C8.54837 2.39141 6.73089 -1.79785 4.11148 0.867388L10.8736 7.86689L12.6307 6.22251C12.5626 5.91799 10.4402 4.48677 9.9556 3.95024L9.95406 3.94879ZM5.08989 3.93284C4.67345 3.53842 4.43349 2.75393 3.83746 2.60022C2.03391 2.1304 0.154505 6.99539 0.0322042 8.45272C-0.761977 17.9724 12.8645 31.1217 23.2879 28.7102C23.7477 28.6044 26.9663 27.4661 27.0886 27.3138C27.2403 25.9304 25.6194 25.7709 24.8593 25.1909C24.0357 24.563 21.8544 22.4401 21.1624 22.1516C20.3372 21.8079 19.2489 22.5286 17.8881 22.2023C17.7178 22.1617 15.1882 20.5724 14.9421 20.3941C13.6091 19.4283 8.85644 15.1564 8.44155 13.9209C7.56532 11.3079 9.86891 10.0942 9.61657 9.00084C9.52213 8.59047 5.75867 4.56652 5.08834 3.92994L5.08989 3.93284ZM29.3039 26.1639C29.4711 26.0493 29.7467 24.7414 29.5284 24.2759C29.3767 23.954 24.6038 19.4878 24.2493 19.292C22.7724 18.4742 22.5371 19.337 21.1825 19.6995C21.0803 20.8755 22.6377 20.9639 23.4164 21.5947C24.2896 22.3038 28.4014 26.7787 29.3039 26.1625V26.1639Z" fill="black" />
@@ -693,23 +697,32 @@ export default function Home() {
               >
                 戻る
               </button>
-              <button
-                onClick={goNext}
-                className={`border-2 px-6 py-2 font-bold shadow-sm ${true
-                  ? "border-[#38542A] bg-[#38542A] text-white hover:bg-[#254e33]"
-                  : "cursor-not-allowed border-[#AEB7A8] bg-[#E7EBE3] text-[#7a857d]"
-                  }`}
-                disabled={currentStep === totalSteps}
-              >
-                次へ
-              </button>
+              {currentStep < totalSteps ? (
+                <button
+                  onClick={goNext}
+                  className={`border-2 px-6 py-2 font-bold shadow-sm border-[#38542A] bg-[#38542A] text-white hover:bg-[#254e33]`}
+                >
+                  次へ
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsFinished(true)}
+                  className={`border-2 px-6 py-2 font-bold shadow-sm ${answeredCount === 6
+                    ? "border-[#38542A] bg-[#38542A] text-white hover:bg-[#254e33]"
+                    : "cursor-not-allowed border-[#AEB7A8] bg-[#E7EBE3] text-[#7a857d]"}
+                  `}
+                  disabled={answeredCount !== 6}
+                >
+                  完了
+                </button>
+              )}
             </div>
           </section>
         )}
 
         {/* Estimate Card (hidden on completion) */}
-        {answeredCount !== 6 && (
-          <div className="mt-6 border-2 border-[#38542A] bg-white p-5">
+        {!isFinished && (
+          <div className="mt-6 border-2 border-[#38542A] bg-transparent p-5">
             <div className="mb-2 text-sm text-[#385243]">現在の試算</div>
             <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:justify-between">
               <div className="text-[22px] font-extrabold text-[#38542A]">

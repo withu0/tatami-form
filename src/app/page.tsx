@@ -487,7 +487,7 @@ export default function Home() {
                     { key: "living", label: "リビング・洋室", sub: "係数0.95" },
                     { key: "unknown", label: "その他・わからない", sub: "係数1.10" },
                   ] as { key: RoomTypeKey; label: string; sub: string }[]
-                ).map(({ key, label, sub }) => (
+                ).map(({ key, label }) => (
                   <button
                     key={key}
                     onClick={() => {
@@ -517,7 +517,7 @@ export default function Home() {
                       { key: "eightPlus", label: "8畳以上", sub: "係数0.95 / 8畳" },
                       { key: "custom", label: "わからない・入力する", sub: "畳数を入力" },
                     ] as { key: SizeKey; label: string; sub: string }[]
-                  ).map(({ key, label, sub }) => (
+                  ).map(({ key, label }) => (
                     <button
                       key={key}
                       onClick={() => {
@@ -566,7 +566,7 @@ export default function Home() {
                     { key: "okidatami", label: "置き畳タイプが欲しい", sub: "係数1.30" },
                     { key: "unknown", label: "わからない・相談", sub: "係数1.30" },
                   ] as { key: WorkKey; label: string; sub: string }[]
-                ).map(({ key, label, sub }) => (
+                ).map(({ key, label }) => (
                   <button
                     key={key}
                     onClick={() => {
@@ -595,7 +595,7 @@ export default function Home() {
                     { key: "pets", label: "ペットがいる部屋", sub: "係数1.25" },
                     { key: "care", label: "介護・お風呂用", sub: "係数1.35" },
                   ] as { key: UsageKey; label: string; sub: string }[]
-                ).map(({ key, label, sub }) => (
+                ).map(({ key, label }) => (
                   <button
                     key={key}
                     onClick={() => {
@@ -624,7 +624,7 @@ export default function Home() {
                     { key: "durability", label: "耐久性重視", sub: "係数1.15" },
                     { key: "design", label: "デザイン重視", sub: "係数1.25" },
                   ] as { key: PriorityKey; label: string; sub: string }[]
-                ).map(({ key, label, sub }) => (
+                ).map(({ key, label }) => (
                   <button
                     key={key}
                     onClick={() => {
@@ -654,7 +654,7 @@ export default function Home() {
                       { key: "resin", label: "樹脂畳", sub: "係数0.95" },
                       { key: "washi", label: "和紙畳", sub: "係数1.10" },
                     ] as { key: MaterialKey; label: string; sub: string }[]
-                  ).map(({ key, label, sub }) => (
+                  ).map(({ key, label }) => (
                     <button
                       key={key}
                       onClick={() => setMaterial(key)}

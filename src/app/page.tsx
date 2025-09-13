@@ -9,107 +9,105 @@ const shipporimincho = Shippori_Mincho({
   weight: ["400", "500", "600", "700"],
 });
 
-type RoomTypeKey = "detached" | "mansion" | "living" | "unknown";
-type SizeKey = "small" | "six" | "eightPlus" | "custom";
-type WorkKey = "replace" | "new" | "okidatami" | "unknown";
-type UsageKey = "daily" | "kids" | "pets" | "care" | "unknown";
-type PriorityKey = "cost" | "health" | "durability" | "design" | "unknown";
-type MaterialKey = "igusa_cn" | "igusa_jp" | "resin" | "washi" | "any";
-type GradeKey = "economy" | "standard" | "premium" | "deluxe";
+// 新ロジック用の型
+type CategoryKey = "fusuma" | "shoji" | "tategu" | "tatami";
 
-const ROOM_TYPE_COEF: Record<RoomTypeKey, number> = {
-  detached: 1.0,
-  mansion: 1.15,
-  living: 0.95,
-  unknown: 1.1,
+// 襖・障子共通のサイズ（張替え/修理時の係数）
+type PaperSizeKey = "small" | "medium" | "large";
+
+// 襖 Q3（作業内容）
+type FusumaWorkKey =
+  | "harikae_low"
+  | "harikae_mid"
+  | "harikae_high"
+  | "hikite"
+  | "adjust"
+  | "frame_fix"
+  | "new";
+
+// 障子 Q3（作業内容）
+type ShojiWorkKey =
+  | "harikae_normal"
+  | "harikae_reinforced"
+  | "harikae_plastic"
+  | "frame_fix"
+  | "adjust"
+  | "new";
+
+// 建具 Q2, Q3
+type TateguPartKey = "rail" | "roller" | "frame";
+type TateguFixKey = "simple" | "overlay_rail" | "partial_replace" | "new";
+type TateguLengthKey = "l_1m" | "l_1_8m" | "l_3_6m" | "unknown";
+
+// 畳 Q2, Q3, Q4
+type TatamiConditionKey = "fade" | "surface_break" | "stain_mold" | "soft_sink" | "other";
+type TatamiPreferenceKey = "low" | "mid" | "high" | "consult";
+type TatamiWorkKey = "uragaeshi" | "omotegae" | "new" | "unknown";
+
+// 係数・単価レンジ
+const FUSUMA_PRICE = {
+  harikae: { low: 3000, high: 10000 }, // 量産/中級/高級は係数で吸収
+  hikite: { low: 1000, high: 3000 },
+  adjust: { low: 2000, high: 5000 },
+  frame_fix: { low: 10000, high: 30000 },
+  new: { low: 20000, high: 50000 },
 };
 
-const SIZE_PRESETS: Record<SizeKey, { tatami: number; coef: number } | null> = {
-  small: { tatami: 4.5, coef: 1.2 },
-  six: { tatami: 6, coef: 1.0 },
-  eightPlus: { tatami: 8, coef: 0.95 },
-  custom: null,
+const FUSUMA_SIZE_COEF: Record<PaperSizeKey, number> = {
+  small: 0.6,
+  medium: 0.8,
+  large: 1.0,
 };
 
-function calcSizeCoefFromTatami(tatami: number): number {
-  if (!tatami || Number.isNaN(tatami)) return 1.0;
-  if (tatami < 4.5) return 1.2;
-  if (tatami <= 6) return 1.0;
-  if (tatami < 8) return 0.98;
-  return 0.95;
-}
+// 新調時の係数（標準/長尺/巾広/巾広+長尺）→ サイズ入力は大中小だが新調のみ別係数を想定
+const NEW_PANEL_SIZE_COEF = {
+  standard: 1.0,
+  long: 1.2,
+  wide: 1.5,
+  wide_long: 1.92,
+};
 
-const WORK_COEF: Record<WorkKey, number> = {
-  replace: 1.0,
-  new: 1.8,
-  okidatami: 1.3,
+const SHOJI_PRICE = {
+  harikae: { low: 2000, high: 7000 },
+  add_reinforced: 2000,
+  add_plastic_low: 3000,
+  add_plastic_high: 4000,
+  frame_fix: { low: 3000, high: 8000 },
+  adjust: { low: 2000, high: 5000 },
+  new: { low: 15000, high: 25000 },
+};
+
+const SHOJI_SIZE_COEF: Record<PaperSizeKey, number> = {
+  small: 0.6,
+  medium: 0.8,
+  large: 1.0,
+};
+
+const TATEGU_PRICE = {
+  simple: { low: 5000, high: 12000 },
+  overlay_rail: { low: 12000, high: 25000 },
+  partial_replace: { low: 15000, high: 35000 },
+  new: { low: 30000, high: 60000 }, // 1間あたり
+};
+
+const TATEGU_LENGTH_COEF: Record<TateguLengthKey, number> = {
+  l_1m: 1.0,
+  l_1_8m: 1.2,
+  l_3_6m: 1.5,
   unknown: 1.3,
 };
 
-const USAGE_COEF: Record<UsageKey, number> = {
-  daily: 1.0,
-  kids: 1.15,
-  pets: 1.25,
-  care: 1.35,
-  unknown: 1.0,
+const TATAMI_PRICE = {
+  uragaeshi: { low: 4000, high: 6000 },
+  omotegae: { low: 6000, high: 13000 },
+  new: { low: 8000, high: 20000 },
 };
 
-const PRIORITY_COEF: Record<PriorityKey, number> = {
-  cost: 0.9,
-  health: 1.2,
-  durability: 1.15,
-  design: 1.25,
-  unknown: 1.0,
-};
-
-const MATERIAL_COEF: Record<MaterialKey, number> = {
-  igusa_cn: 1.0,
-  igusa_jp: 1.0,
-  resin: 0.95,
-  washi: 1.1,
-  any: 0.9,
-};
-
-// 追加オプション料金（1畳あたり、必要に応じて自動適用）
-const ADD_ONS = {
-  antibacterial: 800,
-  antiMite: 1000,
-  antiMold: 800,
-  deodorize: 1200,
-  antiSoil: 1000,
-  durable: 1500,
-  antiSlip: 1200,
-  designEdge: 1500,
-  colorTatami: 2000,
-};
-
-type PriceTable = Record<
-  "表替え" | "新規導入" | "置き畳",
-  Record<MaterialKey, Record<GradeKey, number>>
->;
-
-const PRICE_TABLE: PriceTable = {
-  表替え: {
-    igusa_cn: { economy: 5500, standard: 6500, premium: 7500, deluxe: 9000 },
-    igusa_jp: { economy: 8000, standard: 9000, premium: 10500, deluxe: 12000 },
-    resin: { economy: 6000, standard: 7000, premium: 8500, deluxe: 10000 },
-    washi: { economy: 7500, standard: 9000, premium: 11000, deluxe: 13000 },
-    any: { economy: 6000, standard: 7000, premium: 8500, deluxe: 10000 }, // 標準扱い
-  },
-  新規導入: {
-    igusa_cn: { economy: 11000, standard: 13000, premium: 15000, deluxe: 17000 },
-    igusa_jp: { economy: 16000, standard: 18000, premium: 21000, deluxe: 25000 },
-    resin: { economy: 12000, standard: 14000, premium: 16500, deluxe: 19000 },
-    washi: { economy: 15000, standard: 17500, premium: 20000, deluxe: 23000 },
-    any: { economy: 12000, standard: 14000, premium: 16500, deluxe: 19000 },
-  },
-  置き畳: {
-    igusa_cn: { economy: 4500, standard: 5500, premium: 6500, deluxe: 7500 },
-    igusa_jp: { economy: 6500, standard: 7500, premium: 9000, deluxe: 10500 },
-    resin: { economy: 5000, standard: 6000, premium: 7000, deluxe: 8500 },
-    washi: { economy: 6000, standard: 7000, premium: 8500, deluxe: 10000 },
-    any: { economy: 5000, standard: 6000, premium: 7000, deluxe: 8500 },
-  },
+const TATAMI_PREFERENCE_SHIFT: Record<TatamiPreferenceKey, { lowBias: number; highBias: number }> = {
+  low: { lowBias: -0.15, highBias: -0.1 },
+  mid: { lowBias: -0.05, highBias: 0.0 },
+  high: { lowBias: 0.05, highBias: 0.15 },
+  consult: { lowBias: 0.0, highBias: 0.0 },
 };
 
 function formatJPY(value: number): string {
@@ -117,165 +115,244 @@ function formatJPY(value: number): string {
 }
 
 export default function Home() {
-  // Q1
-  const [roomType, setRoomType] = useState<RoomTypeKey | null>(null);
+  // モーダル表示制御
+  const [showModal, setShowModal] = useState<boolean>(false);
 
-  // Q2
-  const [sizeKey, setSizeKey] = useState<SizeKey | null>(null);
-  const [customTatami, setCustomTatami] = useState<number | "">("");
+  // 共通: カテゴリ選択（Q1）
+  const [category, setCategory] = useState<CategoryKey | null>(null);
 
-  // Q3
-  const [work, setWork] = useState<WorkKey | null>(null);
+  // 襖
+  const [fusumaSize, setFusumaSize] = useState<PaperSizeKey | null>(null);
+  const [fusumaWork, setFusumaWork] = useState<FusumaWorkKey | null>(null);
+  const [fusumaCount, setFusumaCount] = useState<"1" | "2" | "3_4" | "5_plus" | null>(null);
+  const [fusumaNewPanelSizeKey, setFusumaNewPanelSizeKey] = useState<keyof typeof NEW_PANEL_SIZE_COEF | null>(null);
 
-  // Q4
-  const [usage, setUsage] = useState<UsageKey | null>(null);
+  // 障子
+  const [shojiSize, setShojiSize] = useState<PaperSizeKey | null>(null);
+  const [shojiWork, setShojiWork] = useState<ShojiWorkKey | null>(null);
+  const [shojiCount, setShojiCount] = useState<"1" | "2" | "3_plus" | null>(null);
 
-  // Q5
-  const [priority, setPriority] = useState<PriorityKey | null>(null);
+  // 建具
+  const [tateguPart, setTateguPart] = useState<TateguPartKey | null>(null);
+  const [tateguFix, setTateguFix] = useState<TateguFixKey | null>(null);
+  const [tateguNum, setTateguNum] = useState<"1" | "2" | "3_plus" | null>(null);
+  const [tateguLength, setTateguLength] = useState<TateguLengthKey | null>(null);
 
-  // Q6 + グレード
-  const [material, setMaterial] = useState<MaterialKey | null>(null);
-  const [grade, setGrade] = useState<GradeKey>("standard");
+  // 畳
+  const [tatamiCondition, setTatamiCondition] = useState<TatamiConditionKey | null>(null);
+  const [tatamiPref, setTatamiPref] = useState<TatamiPreferenceKey | null>(null);
+  const [tatamiCountRange, setTatamiCountRange] = useState<"1_3" | "4_6" | "7_9" | "10_plus" | null>(null);
+  const [tatamiWorkKind, setTatamiWorkKind] = useState<TatamiWorkKey | null>(null);
 
   const answeredCount = useMemo(() => {
-    const answers = [roomType, sizeKey, work, usage, priority, material];
-    return answers.filter((v) => {
-      if (v === null) return false;
-      if (v === "custom") return customTatami !== ""; // ensure input provided
-      return true;
-    }).length;
-  }, [roomType, sizeKey, work, usage, priority, material, customTatami]);
+    if (!category) return 0;
+    switch (category) {
+      case "fusuma": {
+        let count = 1; // category
+        if (fusumaSize) count += 1;
+        if (fusumaWork) count += 1;
+        if (fusumaCount) count += 1;
+        if (fusumaWork === "new" && fusumaNewPanelSizeKey) count += 1; // 追加詳細
+        return count;
+      }
+      case "shoji": {
+        let count = 1;
+        if (shojiSize) count += 1;
+        if (shojiWork) count += 1;
+        if (shojiCount) count += 1;
+        return count;
+      }
+      case "tategu": {
+        let count = 1;
+        if (tateguPart) count += 1;
+        if (tateguFix) count += 1;
+        if (tateguNum) count += 1;
+        if (tateguLength) count += 1;
+        return count;
+      }
+      case "tatami": {
+        let count = 1;
+        if (tatamiCondition) count += 1;
+        if (tatamiPref) count += 1;
+        if (tatamiCountRange) count += 1;
+        return count;
+      }
+      default:
+        return 0;
+    }
+  }, [category, fusumaSize, fusumaWork, fusumaCount, fusumaNewPanelSizeKey, shojiSize, shojiWork, shojiCount, tateguPart, tateguFix, tateguNum, tateguLength, tatamiCondition, tatamiPref, tatamiCountRange]);
 
-  const tatamiCount = useMemo(() => {
-    if (sizeKey === "custom") return Number(customTatami) || 0;
-    if (!sizeKey) return 0;
-    return SIZE_PRESETS[sizeKey]?.tatami ?? 0;
-  }, [sizeKey, customTatami]);
-
-  const quantityCoef = useMemo(() => {
-    if (sizeKey && SIZE_PRESETS[sizeKey]) return SIZE_PRESETS[sizeKey]!.coef;
-    if (sizeKey === "custom") return calcSizeCoefFromTatami(Number(customTatami) || 0);
-    return 1.0;
-  }, [sizeKey, customTatami]);
+  // 便宜上の数量推定（枚/本/畳）: バケットの代表値
+  const representativeCount = useMemo(() => {
+    if (!category) return 0;
+    if (category === "fusuma") {
+      if (fusumaCount === "1") return 1;
+      if (fusumaCount === "2") return 2;
+      if (fusumaCount === "3_4") return 3.5;
+      if (fusumaCount === "5_plus") return 6;
+    } else if (category === "shoji") {
+      if (shojiCount === "1") return 1;
+      if (shojiCount === "2") return 2;
+      if (shojiCount === "3_plus") return 3.5;
+    } else if (category === "tategu") {
+      if (tateguNum === "1") return 1;
+      if (tateguNum === "2") return 2;
+      if (tateguNum === "3_plus") return 3.5;
+    } else if (category === "tatami") {
+      if (tatamiCountRange === "1_3") return 2;
+      if (tatamiCountRange === "4_6") return 5;
+      if (tatamiCountRange === "7_9") return 8;
+      if (tatamiCountRange === "10_plus") return 10;
+    }
+    return 0;
+  }, [category, fusumaCount, shojiCount, tateguNum, tatamiCountRange]);
 
   const stepSpread = useMemo(() => {
-    // 回答済質問数に応じた±幅
     switch (answeredCount) {
       case 1:
-        return 0.5; // ±50%
+        return 0.5;
       case 2:
-        return 0.4; // ±40%
+        return 0.35;
       case 3:
-        return 0.3; // ±30%
+        return 0.25;
       case 4:
-        return 0.2; // ±20%
+        return 0.15;
       case 5:
-        return 0.15; // ±15%
-      case 6:
-        return 0.1; // ±10%
+        return 0.1;
       default:
-        return 0.6; // 未入力時は広め
+        return 0.6;
     }
   }, [answeredCount]);
 
   const accuracy = useMemo(() => {
-    switch (answeredCount) {
-      case 1:
-        return 10;
-      case 2:
-        return 25;
-      case 3:
-        return 40;
-      case 4:
-        return 60;
-      case 5:
-        return 80;
-      case 6:
-        return 95;
-      default:
-        return 0;
-    }
+    if (answeredCount === 0) return 0;
+    const acc = Math.min(95, 15 + answeredCount * 18);
+    return acc < 0 ? 0 : acc;
   }, [answeredCount]);
+  // 各カテゴリごとの金額レンジ計算
+  type Range = { low: number; high: number } | null;
 
-  const baseUnitPrice = useMemo(() => {
-    const workKey = work ?? "unknown";
-    let tableKey: keyof PriceTable = "表替え";
-    if (workKey === "new") tableKey = "新規導入";
-    else if (workKey === "okidatami") tableKey = "置き畳";
-
-    const mat = material ?? "resin"; // こだわりなし時の無難な基準
-    return PRICE_TABLE[tableKey][mat][grade];
-  }, [work, material, grade]);
-
-  const addOnPerTatami = useMemo(() => {
-    let add = 0;
-    if (usage === "kids") add += ADD_ONS.antibacterial + ADD_ONS.antiMite;
-    if (usage === "pets") add += ADD_ONS.deodorize + ADD_ONS.antiSoil + ADD_ONS.durable;
-    if (usage === "care") add += ADD_ONS.antiSlip + ADD_ONS.antiMold;
-
-    if (priority === "health") add += ADD_ONS.antibacterial + ADD_ONS.antiMite + ADD_ONS.antiMold;
-    if (priority === "durability") add += ADD_ONS.antiSoil + ADD_ONS.durable;
-    if (priority === "design") add += ADD_ONS.designEdge + ADD_ONS.colorTatami;
-    return add;
-  }, [usage, priority]);
-
-  const step1Only = answeredCount <= 3; // ①②③ までが揃えば概算
-
-  const result = useMemo(() => {
-    const tatami = tatamiCount;
-    if (!tatami || !roomType || !sizeKey || !work) return null;
-
-    const typeCoef = ROOM_TYPE_COEF[roomType];
-    const qtyCoef = quantityCoef;
-    const workCoef = WORK_COEF[work];
-
-    const base = baseUnitPrice * tatami * typeCoef * qtyCoef * workCoef;
-
-    if (step1Only || !usage || !priority || !material) {
-      const spread = 0.3; // STEP1の定義（①②③が埋まっている場合）
-      const low = base * (1 - spread);
-      const high = base * (1 + spread);
-      return { price: base, low, high };
+  const estimateRange: Range = useMemo(() => {
+    if (!category) return null;
+    if (category === "fusuma") {
+      if (!fusumaSize || !fusumaWork || !fusumaCount) return null;
+      const qty = representativeCount;
+      const sizeCoef = FUSUMA_SIZE_COEF[fusumaSize];
+      if (fusumaWork === "harikae_low" || fusumaWork === "harikae_mid" || fusumaWork === "harikae_high") {
+        // 量産/中級/高級でレンジ内の位置を少し変える
+        const base = FUSUMA_PRICE.harikae;
+        const pos = fusumaWork === "harikae_low" ? 0.35 : fusumaWork === "harikae_mid" ? 0.6 : 0.9;
+        const unit = base.low + (base.high - base.low) * pos;
+        const v = unit * sizeCoef * qty;
+        return { low: Math.round(v * (1 - stepSpread)), high: Math.round(v * (1 + stepSpread)) };
+      }
+      if (fusumaWork === "hikite") {
+        const unit = (FUSUMA_PRICE.hikite.low + FUSUMA_PRICE.hikite.high) / 2;
+        const v = unit * qty; // 金具は枚サイズ無関係とする
+        return { low: Math.round(v * (1 - stepSpread)), high: Math.round(v * (1 + stepSpread)) };
+      }
+      if (fusumaWork === "adjust") {
+        const unit = (FUSUMA_PRICE.adjust.low + FUSUMA_PRICE.adjust.high) / 2;
+        const v = unit * sizeCoef * qty;
+        return { low: Math.round(v * (1 - stepSpread)), high: Math.round(v * (1 + stepSpread)) };
+      }
+      if (fusumaWork === "frame_fix") {
+        const unit = (FUSUMA_PRICE.frame_fix.low + FUSUMA_PRICE.frame_fix.high) / 2;
+        const v = unit * sizeCoef * qty;
+        return { low: Math.round(v * (1 - stepSpread)), high: Math.round(v * (1 + stepSpread)) };
+      }
+      if (fusumaWork === "new") {
+        const sizeKey = fusumaNewPanelSizeKey ?? "standard";
+        const coef = NEW_PANEL_SIZE_COEF[sizeKey];
+        const unit = (FUSUMA_PRICE.new.low + FUSUMA_PRICE.new.high) / 2;
+        const v = unit * coef * qty;
+        return { low: Math.round(v * (1 - stepSpread)), high: Math.round(v * (1 + stepSpread)) };
+      }
+      return null;
     }
 
-    const usageCoef = USAGE_COEF[usage];
-    const priorityCoef = PRIORITY_COEF[priority];
-    const materialCoef = MATERIAL_COEF[material];
+    if (category === "shoji") {
+      if (!shojiSize || !shojiWork || !shojiCount) return null;
+      const qty = representativeCount;
+      const sizeCoef = SHOJI_SIZE_COEF[shojiSize];
 
-    const detailed = base * usageCoef * priorityCoef * materialCoef;
-    const totalAddOns = addOnPerTatami * tatami; // 加算は係数計算とは独立
-    const final = detailed + totalAddOns;
-    const spread = 0.1; // STEP2 ±10%
-    const low = final * (1 - spread);
-    const high = final * (1 + spread);
-    return { price: final, low, high };
-  }, [
-    tatamiCount,
-    roomType,
-    sizeKey,
-    work,
-    usage,
-    priority,
-    material,
-    baseUnitPrice,
-    quantityCoef,
-    addOnPerTatami,
-    step1Only,
-  ]);
+      if (shojiWork === "harikae_normal" || shojiWork === "harikae_reinforced" || shojiWork === "harikae_plastic") {
+        const base = SHOJI_PRICE.harikae;
+        let low = base.low;
+        let high = base.high;
+        if (shojiWork === "harikae_reinforced") {
+          low += SHOJI_PRICE.add_reinforced;
+          high += SHOJI_PRICE.add_reinforced;
+        } else if (shojiWork === "harikae_plastic") {
+          low += SHOJI_PRICE.add_plastic_low;
+          high += SHOJI_PRICE.add_plastic_high;
+        }
+        const vLow = low * sizeCoef * qty;
+        const vHigh = high * sizeCoef * qty;
+        // spread は回答進捗に応じて補正
+        const center = (vLow + vHigh) / 2;
+        return { low: Math.round(center * (1 - stepSpread)), high: Math.round(center * (1 + stepSpread)) };
+      }
+      if (shojiWork === "frame_fix") {
+        const unit = (SHOJI_PRICE.frame_fix.low + SHOJI_PRICE.frame_fix.high) / 2;
+        const v = unit * sizeCoef * qty;
+        return { low: Math.round(v * (1 - stepSpread)), high: Math.round(v * (1 + stepSpread)) };
+      }
+      if (shojiWork === "adjust") {
+        const unit = (SHOJI_PRICE.adjust.low + SHOJI_PRICE.adjust.high) / 2;
+        const v = unit * sizeCoef * qty;
+        return { low: Math.round(v * (1 - stepSpread)), high: Math.round(v * (1 + stepSpread)) };
+      }
+      if (shojiWork === "new") {
+        const unit = (SHOJI_PRICE.new.low + SHOJI_PRICE.new.high) / 2;
+        const v = unit * sizeCoef * qty;
+        return { low: Math.round(v * (1 - stepSpread)), high: Math.round(v * (1 + stepSpread)) };
+      }
+      return null;
+    }
 
-  const roundedRange = useMemo(() => {
-    if (!result) return null;
-    // 回答数に応じた幅で再補正（セクション4のマトリクス）
-    const center = result.price;
-    const low = center * (1 - stepSpread);
-    const high = center * (1 + stepSpread);
-    return { low: Math.round(low), high: Math.round(high) };
-  }, [result, stepSpread]);
+    if (category === "tategu") {
+      if (!tateguPart || !tateguFix || !tateguNum || !tateguLength) return null;
+      const qty = representativeCount;
+      const lenCoef = TATEGU_LENGTH_COEF[tateguLength];
+      const base = TATEGU_PRICE[tateguFix];
+      const unit = (base.low + base.high) / 2;
+      const v = unit * lenCoef * qty;
+      return { low: Math.round(v * (1 - stepSpread)), high: Math.round(v * (1 + stepSpread)) };
+    }
 
-  const steps = [1, 2, 3, 4, 5, 6].map((n) => n <= answeredCount);
+    if (category === "tatami") {
+      if (!tatamiCondition || !tatamiPref || !tatamiCountRange) return null;
+      // 条件から大まかな作業種別を推定（ユーザー選択のQ3は希望ベース。ここでは自動推奨も可能）
+      let suggested: TatamiWorkKey = "omotegae";
+      if (tatamiCondition === "fade") suggested = "uragaeshi";
+      if (tatamiCondition === "surface_break" || tatamiCondition === "stain_mold") suggested = "omotegae";
+      if (tatamiCondition === "soft_sink") suggested = "new";
+      const workKind = tatamiWorkKind ?? suggested;
+      const resolvedKind: Exclude<TatamiWorkKey, "unknown"> = workKind === "unknown" ? "omotegae" : workKind;
+      const base = TATAMI_PRICE[resolvedKind];
+      const count = representativeCount;
+      const prefShift = TATAMI_PREFERENCE_SHIFT[tatamiPref];
+      const unitLow = base.low * (1 + prefShift.lowBias);
+      const unitHigh = base.high * (1 + prefShift.highBias);
+      const center = ((unitLow + unitHigh) / 2) * count;
+      return { low: Math.round(center * (1 - stepSpread)), high: Math.round(center * (1 + stepSpread)) };
+    }
+    return null;
+  }, [category, fusumaSize, fusumaWork, fusumaCount, fusumaNewPanelSizeKey, shojiSize, shojiWork, shojiCount, tateguPart, tateguFix, tateguNum, tateguLength, tatamiCondition, tatamiPref, tatamiCountRange, tatamiWorkKind, representativeCount, stepSpread]);
+
+  const steps = useMemo(() => {
+    // カテゴリごとに最大ステップを定義
+    if (!category) return [false];
+    const n = category === "tategu" ? 5 : 4; // 建具はQ2〜Q4に本数と長さで1問増
+    return Array.from({ length: n }, (_, i) => i + 1 <= answeredCount);
+  }, [category, answeredCount]);
 
   // Wizard controls
-  const totalSteps = 6;
+  const totalSteps = useMemo(() => {
+    if (!category) return 1;
+    return category === "tategu" ? 5 : 4;
+  }, [category]);
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isFinished, setIsFinished] = useState<boolean>(false);
 
@@ -310,14 +387,19 @@ export default function Home() {
     setCurrentStep((s) => Math.max(1, s - 1));
   }
 
-  const stepTitles = [
-    "お部屋のタイプはどれに近いですか？",
-    "お部屋の畳の広さ(畳数)はどれくらいですか？",
-    "今回は新規？張り替え？",
-    "どんな用途で使いますか？",
-    "特に重視するポイントは？",
-    "好みの畳のスタイルは？",
-  ];
+  const stepTitles = useMemo(() => {
+    if (!category) return ["修理したい場所はどこですか？"];
+    switch (category) {
+      case "fusuma":
+        return ["修理したい場所はどこですか？", "襖のサイズを教えてください", "どのような修理・作業をご希望ですか？", "修理する枚数を選んでください"];
+      case "shoji":
+        return ["修理したい場所はどこですか？", "障子のサイズを教えてください", "どのような修理・作業をご希望ですか？", "修理する枚数を選んでください"];
+      case "tategu":
+        return ["修理したい場所はどこですか？", "どの部分の修理が必要ですか？", "どのように修理したいですか？", "修理する本数を教えてください", "長さを教えてください"];
+      case "tatami":
+        return ["修理したい場所はどこですか？", "畳の状態を教えてください", "どんな仕上がりを希望しますか？", "修理する畳の枚数を教えてください"];
+    }
+  }, [category]);
 
   const stepImageMap: Record<number, string> = {
     1: "/1.png",
@@ -362,80 +444,138 @@ export default function Home() {
   return (
     <main className={`min-h-screen bg-[#f6f4ee] text-[#2b3a2e] py-6 px-4 ${shipporimincho.className}`}>
       <div className="mx-auto w-full max-w-[980px]">
-        {/* Progress / Accuracy and Step Header (hidden on completion) */}
-        {!isFinished && (
-          <>
-            <div className="mb-4 bg-transparent">
-              <div className="mb-2 flex items-center justify-between">
+        {/* 初期ページ - プロモーション画像とボタン */}
+        <div className="text-center">
+          {/* メイン画像エリア */}
+          <div className="relative overflow-hidden bg-transparent h-[400px] md:h-[500px] w-full mb-8">
+            <Image
+              alt="建具・ふすま・畳の困った!!を解決するなら和室.Com"
+              src="/1.png"
+              fill
+              sizes="100vw"
+              className="object-cover"
+              priority
+            />
+          </div>
 
-                <span className="text-lg font-extrabold text-[#38542A]">
-                  <span className="mb-2 text-sm pr-4 text-[#385243]">Step {currentStep} / {totalSteps}</span>
-                  {accuracy}%
-                </span>
-                <span className="font-bold text-[#38542A] text-righ">見積もり精度</span>
-              </div>
-              <div className="mb-2 grid grid-cols-6">
-                {steps.map((done, i) => (
-                  <div key={i} className={`h-2  ${done ? "bg-[#38542A]" : "bg-[#DADFD6]"}`} />
-                ))}
-              </div>
-              {/* <p className="text-sm text-[#385243]">
-                回答が進むほど金額の幅が狭まり、精度が上がります。
-              </p> */}
-            </div>
-            <div className=" flex items-center justify-start mb-[10px]">
-              <span className="pr-5">
-                {IconSvgMap[currentStep]}
-              </span>
+          {/* メインタイトル */}
+          <div className="mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-[#38542A] mb-4">
+              建具・ふすま・畳の<br />
+              「困った!!」を解決するなら和室.Com
+            </h1>
+            <p className="text-lg text-[#385243] mb-6">
+              結局いくらかかる?が30秒でわかる!
+            </p>
+          </div>
 
-              <h1 className="bg-transparent text-[26px] font-bold tracking-wide">
-                {stepTitles[currentStep - 1]}
-              </h1>
-            </div>
+          {/* 無料シミュレーションボタン */}
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-[#d94d1a] text-white font-bold py-4 px-8 text-xl hover:bg-[#b53c0e] transition-colors flex items-center justify-center mx-auto"
+          >
+            無料シミュレーションはこちら
+            <span className="ml-2">▶</span>
+          </button>
+        </div>
 
-            <div className="relative overflow-hidden bg-transparent h-[300px] md:h-[420px] w-full">
-              <Image
-                alt="ステップ用イメージ"
-                src={stepImageMap[currentStep]}
-                fill
-                sizes="100vw"
-                className="object-cover"
-                priority
-              />
-            </div>
-          </>
-        )}
+        {/* モーダル */}
+        {showModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white max-w-4xl w-full h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                {/* モーダルヘッダー */}
+                <div className="flex justify-end items-center mb-6">
+                  {/* <h2 className="text-2xl font-bold text-[#38542A]">無料シミュレーション</h2> */}
+                  <button
+                    onClick={() => {
+                      setShowModal(false);
+                      // Reset all states when closing modal
+                      setCategory(null);
+                      setCurrentStep(1);
+                      setIsFinished(false);
+                      setFusumaSize(null);
+                      setFusumaWork(null);
+                      setFusumaCount(null);
+                      setFusumaNewPanelSizeKey(null);
+                      setShojiSize(null);
+                      setShojiWork(null);
+                      setShojiCount(null);
+                      setTateguPart(null);
+                      setTateguFix(null);
+                      setTateguNum(null);
+                      setTateguLength(null);
+                      setTatamiCondition(null);
+                      setTatamiPref(null);
+                      setTatamiCountRange(null);
+                      setTatamiWorkKind(null);
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
 
+                {/* Progress / Accuracy and Step Header (hidden on completion) */}
+                {!isFinished && (
+                  <>
+                    <div className="mb-4 bg-transparent">
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-lg font-extrabold text-[#38542A]">
+                          <span className="mb-2 text-sm pr-4 text-[#385243]">Step {currentStep} / {totalSteps}</span>
+                          {accuracy}%
+                        </span>
+                        <span className="font-bold text-[#38542A] text-right">見積もり精度</span>
+                      </div>
+                      <div className="mb-2 flex w-full">
+                        {steps.map((done, i) => (
+                          <div key={i} className={`h-2 flex-1 ${i < steps.length - 1 ? 'mr-1' : ''} ${done ? "bg-[#38542A]" : "bg-[#DADFD6]"}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-start mb-[10px]">
+                      <span className="pr-5">
+                        {IconSvgMap[currentStep]}
+                      </span>
+                      <h1 className="bg-transparent text-[26px] font-bold tracking-wide">{stepTitles[currentStep - 1] ?? ""}</h1>
+                    </div>
 
-        {/* Wizard (one question per step) */}
-        {isFinished ? (
+                    <div className="relative overflow-hidden bg-transparent h-[200px] md:h-[300px] w-full mb-6">
+                      <Image
+                        alt="ステップ用イメージ"
+                        src={stepImageMap[currentStep]}
+                        fill
+                        sizes="100vw"
+                        className="object-cover rounded-lg"
+                        priority
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Wizard (one question per step) */}
+                {isFinished ? (
           // Final Estimate Result Card (matching attached design)
           <section className="mt-6">
             <div className="border-2 border-[#38542A] bg-transparent p-4 text-center md:p-8">
               <div className="flex md:gap-10 gap-0 flex-wrap justify-center">
                 <div className="w-[503px]">
-                  <h2 className="text-2xl md:text-3xl font-bold text-[#38542A] mb-2">あなたの畳の最終見積もり結果</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold text-[#38542A] mb-2">あなたの最終見積もり結果</h2>
                   <div className="text-[#385243] mb-4">ご回答いただいた内容から専用の見積もりを作成しました。</div>
                   <div className="border-2 border-[#38542A] py-8 px-4 my-6 max-w-xl mx-auto">
                     <div className="text-lg text-[#385243] mb-2">最終見積額</div>
                     <div className="text-3xl md:text-4xl font-extrabold text-[#38542A] mb-2">
-                      {roundedRange ? `${roundedRange.low.toLocaleString()}~${roundedRange.high.toLocaleString()}円` : "-"}
+                      {estimateRange ? `${estimateRange.low.toLocaleString()}~${estimateRange.high.toLocaleString()}円` : "-"}
                     </div>
                   </div>
                   <div className="text-sm text-[#385243] mb-6">※この見積もりは概算です。正確な金額は現地確認後に決定します。</div>
                 </div>
-                <div className="text-left flex-1 w-[300px] min-w-[300px] ">
+                {/* <div className="text-left flex-1 w-[300px] min-w-[300px] ">
                   <h3 className="text-xl font-bold text-[#38542A] mb-2">選択された条件</h3>
                   <ul className="text-[#385243] text-sm list-disc pl-5">
-                    <li>お部屋タイプ：{roomType === "detached" ? "一戸建ての和室" : roomType === "mansion" ? "マンションの和室" : roomType === "living" ? "リビング・洋室" : "その他"}</li>
-                    <li>畳の広さ：{sizeKey === "small" ? "4.5畳以下" : sizeKey === "six" ? "6畳" : sizeKey === "eightPlus" ? "8畳以上" : `${customTatami}畳`}</li>
-                    <li>施工内容：{work === "replace" ? "既存畳の張り替え" : work === "new" ? "新規導入" : work === "okidatami" ? "置き畳" : "相談"}</li>
-                    <li>用途：{usage === "daily" ? "普段の生活" : usage === "kids" ? "子ども部屋" : usage === "pets" ? "ペットがいる部屋" : usage === "care" ? "介護・お風呂用" : "-"}</li>
-                    <li>重視ポイント：{priority === "cost" ? "コスト" : priority === "health" ? "抗菌・防カビ・防ダニ" : priority === "durability" ? "耐久性" : priority === "design" ? "デザイン" : "-"}</li>
-                    <li>畳スタイル：{material === "igusa_cn" ? "天然い草（中国産）" : material === "igusa_jp" ? "天然い草（国産）" : material === "resin" ? "樹脂畳" : material === "washi" ? "和紙畳" : "-"}</li>
-                    <li>グレード：{grade === "economy" ? "エコノミー" : grade === "standard" ? "スタンダード" : grade === "premium" ? "プレミアム" : grade === "deluxe" ? "デラックス" : "-"}</li>
+                    <li>カテゴリ：{category === "fusuma" ? "襖" : category === "shoji" ? "障子" : category === "tategu" ? "建具" : category === "tatami" ? "畳" : "-"}</li>
                   </ul>
-                </div>
+                </div> */}
               </div>
                 <div className="text-left mb-8 flex flex-col w-full mt-4 md:mt-0">
                   <h3 className="text-xl font-bold text-center text-[#38542A] mb-2">さらに正確な見積もりのために</h3>
@@ -473,217 +613,328 @@ export default function Home() {
                   </span>
                   電話で相談する</a>
               </div>
+              
+              {/* モーダルを閉じるボタン */}
+              {/* <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    // Reset all states when closing modal
+                    setCategory(null);
+                    setCurrentStep(1);
+                    setIsFinished(false);
+                    setFusumaSize(null);
+                    setFusumaWork(null);
+                    setFusumaCount(null);
+                    setFusumaNewPanelSizeKey(null);
+                    setShojiSize(null);
+                    setShojiWork(null);
+                    setShojiCount(null);
+                    setTateguPart(null);
+                    setTateguFix(null);
+                    setTateguNum(null);
+                    setTateguLength(null);
+                    setTatamiCondition(null);
+                    setTatamiPref(null);
+                    setTatamiCountRange(null);
+                    setTatamiWorkKind(null);
+                  }}
+                  className="bg-gray-500 text-white font-bold py-3 px-8 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  モーダルを閉じる
+                </button>
+              </div> */}
             </div>
           </section>
         ) : (
           <section className="mt-6">
-            {/* STEP 1 */}
+            {/* STEP 1: カテゴリ選択 */}
             {currentStep === 1 && (
-              <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 md:grid-cols-4">
-                {(
-                  [
-                    { key: "detached", label: "一戸建ての和室", sub: "係数1.00" },
-                    { key: "mansion", label: "マンションの和室", sub: "係数1.15" },
-                    { key: "living", label: "リビング・洋室", sub: "係数0.95" },
-                    { key: "unknown", label: "その他・わからない", sub: "係数1.10" },
-                  ] as { key: RoomTypeKey; label: string; sub: string }[]
-                ).map(({ key, label }) => (
+              <div className="grid text-sm grid-cols-1 gap-[10px] sm:grid-cols-2 md:grid-cols-4">
+                {([
+                  { key: "fusuma", label: "襖（ふすま）" },
+                  { key: "shoji", label: "障子（しょうじ）" },
+                  { key: "tategu", label: "建具（襖・障子などの引き戸まわり）" },
+                  { key: "tatami", label: "畳（たたみ）" },
+                ] as { key: CategoryKey; label: string }[]).map(({ key, label }) => (
                   <button
                     key={key}
                     onClick={() => {
-                      setRoomType(key);
-                      setCurrentStep((s) => Math.min(totalSteps, s + 1));
+                      setCategory(key);
+                      setCurrentStep((s) => 2);
                     }}
-                    className={` border-2 px-0 text-center py-3 text-left font-bold shadow-sm transition-colors ${roomType !== key
+                    className={` border-2 px-0 text-center py-3 h-16 font-bold shadow-sm transition-colors ${category !== key
                       ? "border-[#38542A] bg-[#38542A] text-white"
                       : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
                       }`}
                   >
-                    <div>{label}</div>
-                    {/* <div className="text-xs opacity-80">{sub}</div> */}
+                    <div>
+                      {key === "tategu" ? (
+                        <div className="text-xs">
+                          建具<br />
+                          （襖・障子などの引き戸まわり）
+                        </div>
+                      ) : (
+                        label
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
             )}
 
-            {/* STEP 2 */}
+            {/* STEP 2: カテゴリ別のQ2 */}
             {currentStep === 2 && (
               <>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                  {(
-                    [
-                      { key: "small", label: "4畳半以下", sub: "係数1.20 / 4.5畳" },
-                      { key: "six", label: "6畳", sub: "係数1.00 / 6畳" },
-                      { key: "eightPlus", label: "8畳以上", sub: "係数0.95 / 8畳" },
-                      { key: "custom", label: "わからない・入力する", sub: "畳数を入力" },
-                    ] as { key: SizeKey; label: string; sub: string }[]
-                  ).map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        setSizeKey(key);
-                        if (key !== "custom") setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                      }}
-                      className={`border-2 py-3 text-center font-bold ${key === "custom" && 'text-[15px]'} shadow-sm transition-colors ${sizeKey !== key
-                        ? "border-[#38542A] bg-[#38542A] text-white"
-                        : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                        }`}
-                    >
-                      <div>{label}</div>
-                      {/* <div className="text-xs opacity-80">{sub}</div> */}
-                    </button>
-                  ))}
-                </div>
-                {sizeKey === "custom" && (
-                  <div className="mt-3 flex items-center gap-3">
-                    <label className="text-sm">畳数</label>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      step="0.5"
-                      placeholder="例: 5.5"
-                      className="w-32 border border-[#38542A] bg-white px-3 py-2 shadow-sm"
-                      value={customTatami}
-                      onChange={(e) => {
-                        const v = e.target.value === "" ? "" : Number(e.target.value);
-                        setCustomTatami(v);
-                        if (v !== "" && Number(v) > 0) setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                      }}
-                    />
-                    <div className="text-sm opacity-80">係数 {calcSizeCoefFromTatami(Number(customTatami) || 0).toFixed(2)}</div>
+                {category === "fusuma" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {([
+                      { key: "large", label: "大サイズ（2000mm×900mm）" },
+                      { key: "medium", label: "中サイズ（900mm×900mm）" },
+                      { key: "small", label: "小サイズ（600mm×900mm）" },
+                    ] as { key: PaperSizeKey; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setFusumaSize(key); setCurrentStep(3); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${fusumaSize !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {category === "shoji" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {([
+                      { key: "large", label: "大サイズ（2000mm×900mm）" },
+                      { key: "medium", label: "中サイズ（900mm×900mm）" },
+                      { key: "small", label: "小サイズ（600mm×900mm）" },
+                    ] as { key: PaperSizeKey; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setShojiSize(key); setCurrentStep(3); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${shojiSize !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {category === "tategu" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {([
+                      { key: "rail", label: "下レール（敷居）の削れ・段差" },
+                      { key: "roller", label: "戸車の摩耗・音" },
+                      { key: "frame", label: "枠のぐらつき・腐食" },
+                    ] as { key: TateguPartKey; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setTateguPart(key); setCurrentStep(3); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${tateguPart !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {category === "tatami" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    {([
+                      { key: "fade", label: "色あせ・日焼け" },
+                      { key: "surface_break", label: "表面の破れ・ささくれ" },
+                      { key: "stain_mold", label: "シミ・汚れ・カビ" },
+                      { key: "soft_sink", label: "畳が柔らかく沈む" },
+                    ] as { key: TatamiConditionKey; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setTatamiCondition(key); setCurrentStep(3); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${tatamiCondition !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
                   </div>
                 )}
               </>
             )}
 
-            {/* STEP 3 */}
+            {/* STEP 3: カテゴリ別のQ3 */}
             {currentStep === 3 && (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                {(
-                  [
-                    { key: "replace", label: "張り替え", sub: "係数1.00" },
-                    { key: "new", label: "新規で畳を導入したい", sub: "係数1.80" },
-                    { key: "okidatami", label: "置き畳タイプが欲しい", sub: "係数1.30" },
-                    { key: "unknown", label: "わからない・相談", sub: "係数1.30" },
-                  ] as { key: WorkKey; label: string; sub: string }[]
-                ).map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setWork(key);
-                      setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                    }}
-                    className={`border-2 py-3 text-center font-bold ${key !== 'replace' && 'text-[15px]'} shadow-sm transition-colors ${work !== key
-                      ? "border-[#38542A] bg-[#38542A] text-white"
-                      : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                      }`}
-                  >
-                    <div>{label}</div>
-                    {/* <div className="text-xs opacity-80">{sub}</div> */}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* STEP 4 */}
-            {currentStep === 4 && (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                {(
-                  [
-                    { key: "daily", label: "普段の生活", sub: "係数1.00" },
-                    { key: "kids", label: "子ども部屋", sub: "係数1.15" },
-                    { key: "pets", label: "ペットがいる部屋", sub: "係数1.25" },
-                    { key: "care", label: "介護・お風呂用", sub: "係数1.35" },
-                  ] as { key: UsageKey; label: string; sub: string }[]
-                ).map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setUsage(key);
-                      setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                    }}
-                    className={`border-2 py-3 text-center font-bold shadow-sm transition-colors ${usage !== key
-                      ? "border-[#38542A] bg-[#38542A] text-white"
-                      : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                      }`}
-                  >
-                    <div>{label}</div>
-                    {/* <div className="text-xs opacity-80">{sub}</div> */}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* STEP 5 */}
-            {currentStep === 5 && (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                {(
-                  [
-                    { key: "cost", label: "コスト重視", sub: "係数0.90" },
-                    { key: "health", label: "健康・機能性重視", sub: "係数1.20" },
-                    { key: "durability", label: "耐久性重視", sub: "係数1.15" },
-                    { key: "design", label: "デザイン重視", sub: "係数1.25" },
-                  ] as { key: PriorityKey; label: string; sub: string }[]
-                ).map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      setPriority(key);
-                      setCurrentStep((s) => Math.min(totalSteps, s + 1));
-                    }}
-                    className={`border-2 py-3 text-center font-bold shadow-sm transition-colors ${priority !== key
-                      ? "border-[#38542A] bg-[#38542A] text-white"
-                      : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                      }`}
-                  >
-                    <div>{label}</div>
-                    {/* <div className="text-xs opacity-80">{sub}</div> */}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* STEP 6 */}
-            {currentStep === 6 && (
               <>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                  {(
-                    [
-                      { key: "igusa_cn", label: "天然い草（中国産）", sub: "係数1.00" },
-                      { key: "igusa_jp", label: "天然い草（国産）", sub: "係数1.00" },
-                      { key: "resin", label: "樹脂畳", sub: "係数0.95" },
-                      { key: "washi", label: "和紙畳", sub: "係数1.10" },
-                    ] as { key: MaterialKey; label: string; sub: string }[]
-                  ).map(({ key, label }) => (
-                    <button
-                      key={key}
-                      onClick={() => setMaterial(key)}
-                      className={`border-2 py-3 text-center font-bold shadow-sm transition-colors ${material !== key
-                        ? "border-[#38542A] bg-[#38542A] text-white"
-                        : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"
-                        }`}
-                    >
-                      <div>{label}</div>
-                      {/* <div className="text-xs opacity-80">{sub}</div> */}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-3 flex items-center gap-3">
-                  <label className="text-sm">グレード</label>
-                  <select
-                    className="w-48 border border-[#38542A] bg-white px-3 py-2 shadow-sm"
-                    value={grade}
-                    onChange={(e) => setGrade(e.target.value as GradeKey)}
-                  >
-                    <option value="economy">エコノミー</option>
-                    <option value="standard">スタンダード</option>
-                    <option value="premium">プレミアム</option>
-                    <option value="deluxe">デラックス</option>
-                  </select>
-                  <div className="text-sm opacity-80">基準単価: {formatJPY(baseUnitPrice)} / {work === "okidatami" ? "枚" : "畳"}</div>
-                </div>
+                {category === "fusuma" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {([
+                      { key: "harikae_low", label: "襖紙の張替え（量産品）" },
+                      { key: "harikae_mid", label: "襖紙の張替え（中級品）" },
+                      { key: "harikae_high", label: "襖紙の張替え（高級品）" },
+                      { key: "hikite", label: "引き手交換" },
+                      { key: "adjust", label: "開け閉めの調整" },
+                      { key: "frame_fix", label: "枠修理" },
+                      { key: "new", label: "新調（まるごと交換）" },
+                    ] as { key: FusumaWorkKey; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setFusumaWork(key); setCurrentStep(4); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${fusumaWork !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {category === "shoji" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {([
+                      { key: "harikae_normal", label: "障子紙の張替え（普通紙）" },
+                      { key: "harikae_reinforced", label: "障子紙の張替え（強化紙）" },
+                      { key: "harikae_plastic", label: "障子紙の張替え（プラ障子紙）" },
+                      { key: "frame_fix", label: "枠修理" },
+                      { key: "adjust", label: "建付け調整" },
+                      { key: "new", label: "新調（まるごと交換）" },
+                    ] as { key: ShojiWorkKey; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setShojiWork(key); setCurrentStep(4); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${shojiWork !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {category === "tategu" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4 text-sm">
+                    {([
+                      { key: "simple", label: "簡単に直したい（補修/テープ）" },
+                      { key: "overlay_rail", label: "樹脂やアルミのレール追加" },
+                      { key: "partial_replace", label: "部分的に交換" },
+                      { key: "new", label: "新調（まるごと交換）" },
+                    ] as { key: TateguFixKey; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setTateguFix(key); setCurrentStep(4); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${tateguFix !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {category === "tatami" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    {([
+                      { key: "low", label: "できるだけ安く" },
+                      { key: "mid", label: "見た目をきれいに" },
+                      { key: "high", label: "長持ち・耐久性重視" },
+                      { key: "consult", label: "相談したい" },
+                    ] as { key: TatamiPreferenceKey; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setTatamiPref(key); setCurrentStep(4); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${tatamiPref !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </>
+            )}
+
+            {/* STEP 4: カテゴリ別のQ4 or 次の設問 */}
+            {currentStep === 4 && (
+              <>
+                {category === "fusuma" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    {([
+                      { key: "1", label: "1枚" },
+                      { key: "2", label: "2枚" },
+                      { key: "3_4", label: "3〜4枚" },
+                      { key: "5_plus", label: "5枚以上" },
+                    ] as { key: "1" | "2" | "3_4" | "5_plus"; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setFusumaCount(key); setIsFinished(true); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${fusumaCount !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {category === "shoji" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {([
+                      { key: "1", label: "1枚" },
+                      { key: "2", label: "2枚" },
+                      { key: "3_plus", label: "3枚以上" },
+                    ] as { key: "1" | "2" | "3_plus"; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setShojiCount(key); setIsFinished(true); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${shojiCount !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {category === "tategu" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {([
+                      { key: "1", label: "1本" },
+                      { key: "2", label: "2本" },
+                      { key: "3_plus", label: "3本以上" },
+                    ] as { key: "1" | "2" | "3_plus"; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setTateguNum(key); setCurrentStep(5); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${tateguNum !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {category === "tatami" && (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                    {([
+                      { key: "1_3", label: "1〜3畳" },
+                      { key: "4_6", label: "4〜6畳" },
+                      { key: "7_9", label: "7〜9畳" },
+                      { key: "10_plus", label: "10畳以上" },
+                    ] as { key: "1_3" | "4_6" | "7_9" | "10_plus"; label: string }[]).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => { setTatamiCountRange(key); setIsFinished(true); }}
+                        className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${tatamiCountRange !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                      >
+                        <div>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* STEP 5: 建具の長さ選択 */}
+            {currentStep === 5 && category === "tategu" && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+                {([
+                  { key: "l_1m", label: "〜1m" },
+                  { key: "l_1_8m", label: "〜1.8m（1間）" },
+                  { key: "l_3_6m", label: "〜3.6m（2間）" },
+                  { key: "unknown", label: "わからない" },
+                ] as { key: TateguLengthKey; label: string }[]).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => { setTateguLength(key); setIsFinished(true); }}
+                    className={`border-2 py-3 h-16 text-center font-bold shadow-sm transition-colors ${tateguLength !== key ? "border-[#38542A] bg-[#38542A] text-white" : "border-[#38542A] bg-white text-[#2b3a2e] hover:bg-[#eff3ee]"}`}
+                  >
+                    <div>{label}</div>
+                  </button>
+                ))}
+              </div>
             )}
             {/* Navigation */}
             <div className="mt-5 flex items-center justify-between">
@@ -697,57 +948,18 @@ export default function Home() {
               >
                 戻る
               </button>
-              {currentStep < totalSteps ? (
+              {!isFinished && currentStep < totalSteps && (
                 <button
                   onClick={goNext}
                   className={`border-2 px-6 py-2 font-bold shadow-sm border-[#38542A] bg-[#38542A] text-white hover:bg-[#254e33]`}
                 >
                   次へ
                 </button>
-              ) : (
-                <button
-                  onClick={() => setIsFinished(true)}
-                  className={`border-2 px-6 py-2 font-bold shadow-sm ${answeredCount === 6
-                    ? "border-[#38542A] bg-[#38542A] text-white hover:bg-[#254e33]"
-                    : "cursor-not-allowed border-[#AEB7A8] bg-[#E7EBE3] text-[#7a857d]"}
-                  `}
-                  disabled={answeredCount !== 6}
-                >
-                  完了
-                </button>
               )}
             </div>
           </section>
-        )}
-
-        {/* Estimate Card (hidden on completion) */}
-        {!isFinished && (
-          <div className="mt-6 border-2 border-[#38542A] bg-transparent p-5">
-            <div className="mb-2 text-sm text-[#385243]">現在の試算</div>
-            <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:justify-between">
-              <div className="text-[22px] font-extrabold text-[#38542A]">
-                {roundedRange ? (
-                  <>
-                    {formatJPY(roundedRange.low)} ～ {formatJPY(roundedRange.high)}
-                  </>
-                ) : (
-                  "金額を表示するにはいくつかの質問にお答えください"
                 )}
               </div>
-              <div className="text-sm text-[#385243]">
-                畳数: {tatamiCount || 0} / 単価: {formatJPY(baseUnitPrice)} / 係数合計: {(
-                  (roomType ? ROOM_TYPE_COEF[roomType] : 1) *
-                  quantityCoef *
-                  (work ? WORK_COEF[work] : 1) *
-                  (usage ? USAGE_COEF[usage] : 1) *
-                  (priority ? PRIORITY_COEF[priority] : 1) *
-                  (material ? MATERIAL_COEF[material] : 1)
-                ).toFixed(2)}
-                {addOnPerTatami > 0 ? ` / 追加加工 ${formatJPY(addOnPerTatami)}×${tatamiCount || 0}` : ""}
-              </div>
-            </div>
-            <div className="mt-2 text-sm text-[#385243]">
-              精度見込み: <span className="font-bold text-[#38542A]">{accuracy}%</span>（幅 ±{Math.round(stepSpread * 100)}%）
             </div>
           </div>
         )}

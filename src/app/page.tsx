@@ -110,9 +110,9 @@ const TATAMI_PREFERENCE_SHIFT: Record<TatamiPreferenceKey, { lowBias: number; hi
   consult: { lowBias: 0.0, highBias: 0.0 },
 };
 
-function formatJPY(value: number): string {
-  return value.toLocaleString("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
-}
+// function formatJPY(value: number): string {
+//   return value.toLocaleString("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 });
+// }
 
 export default function Home() {
   // モーダル表示制御
@@ -661,7 +661,7 @@ export default function Home() {
                     key={key}
                     onClick={() => {
                       setCategory(key);
-                      setCurrentStep((s) => 2);
+                      setCurrentStep(2);
                     }}
                     className={` border-2 px-0 text-center py-3 h-16 font-bold shadow-sm transition-colors ${category !== key
                       ? "border-[#38542A] bg-[#38542A] text-white"
